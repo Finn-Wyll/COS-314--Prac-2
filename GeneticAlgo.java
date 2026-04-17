@@ -13,7 +13,7 @@ public class GeneticAlgo {
 	private final int POP_SIZE = 16;
 	private final float MUTATION_RATE = 0.2f;
 	private final float CROSSOVER_RATE = 0.7f;
-	private Random generator = new Random();
+	private Random generator;
 	private ArrayList<ArrayList<Integer>> population = new ArrayList<>();
 
 	private void load(String filePath) {
@@ -21,19 +21,17 @@ public class GeneticAlgo {
 		try (Scanner loader = new Scanner(loadFile)) {
 			this.size = loader.nextInt();
 			this.maxWeight = loader.nextInt();
-			while (loader.hasNextInt()) {
-				int weight = loader.nextInt();
-				int value = loader.nextInt();
+			while (loader.hasNextDouble()) {
+				double value = loader.nextDouble();
+				double weight = loader.nextDouble();
 				knapsack.add(new Item(value, weight));
 			}
-
 		} catch (FileNotFoundException e) {
 			System.err.println("could not load file");
 		}
 	}
 
 	private ArrayList<Integer> crossover(ArrayList<Integer> parent1, ArrayList<Integer> parent2) {
-
 		if (generator.nextFloat() <= CROSSOVER_RATE) {
 			ArrayList<Integer> child = new ArrayList<>();
 			int splitPoint = generator.nextInt(parent1.size());
@@ -46,7 +44,6 @@ public class GeneticAlgo {
 			return child;
 		}
 		return parent1;
-
 	}
 
 	private ArrayList<Integer> mutate(ArrayList<Integer> child) {
@@ -56,37 +53,30 @@ public class GeneticAlgo {
 			int current = child.get(mutationPoint);
 			newChild.set(mutationPoint, current == 0 ? 1 : 0);
 			return newChild;
-
 		}
 		return child;
 	}
 
-	private float getFitness(ArrayList<Integer> child) {
-		int totalValue = 0;
-		int totalWeight = 0;
+	private double getFitness(ArrayList<Integer> child) {
+		double totalValue = 0;
+		double totalWeight = 0;
 		for (int i = 0; i < child.size(); i++) {
 			if (child.get(i) == 1) {
 				totalValue += knapsack.get(i).value;
 				totalWeight += knapsack.get(i).weight;
-
 			}
 		}
-		if (totalWeight > maxWeight) {
-			return 0;
-
-		}
-		if (totalWeight == 0)
-			return 0;
-		return (float) totalValue;
+		if (totalWeight > maxWeight || totalWeight == 0) return 0;
+		return totalValue;
 	}
 
 	private ArrayList<Integer> select() {
 		ArrayList<Integer> best = null;
-		float bestFitness = -1;
+		double bestFitness = -1;
 		for (int i = 0; i < 3; i++) {
 			int randomIndex = generator.nextInt(population.size());
 			ArrayList<Integer> candidate = population.get(randomIndex);
-			float fitness = getFitness(candidate);
+			double fitness = getFitness(candidate);
 			if (fitness > bestFitness) {
 				bestFitness = fitness;
 				best = candidate;
@@ -102,15 +92,12 @@ public class GeneticAlgo {
 			ArrayList<Integer> parent2 = select();
 			ArrayList<Integer> child = mutate(crossover(parent1, parent2));
 			newPopulation.add(child);
-
 		}
 		population = newPopulation;
 		iterations++;
-
 	}
 
 	private void initialize() {
-		// set the initial population
 		population.clear();
 		for (int i = 0; i < POP_SIZE; i++) {
 			ArrayList<Integer> chromosome = new ArrayList<>();
@@ -121,27 +108,37 @@ public class GeneticAlgo {
 		}
 	}
 
-	public void run() {
+	public double run(String filePath, long seed) {
+		this.generator = new Random(seed);
+		this.knapsack.clear();
+		this.population.clear();
+		this.iterations = 0;
 
-		load("f8_l-d_kp_23_10000");
-		System.out.println("Size: " + size);
-		System.out.println("Weight: " + maxWeight);
+		load(filePath);
+
+		long startTime = System.currentTimeMillis();
+
 		initialize();
 		while (iterations < MAX_ITERATIONS) {
 			this.iterate();
-
 		}
+
 		ArrayList<Integer> best = null;
-		float bestFitness = -1;
+		double bestFitness = -1;
 		for (ArrayList<Integer> chromosome : population) {
-			float fitness = getFitness(chromosome);
+			double fitness = getFitness(chromosome);
 			if (fitness > bestFitness) {
 				bestFitness = fitness;
 				best = chromosome;
 			}
 		}
-		System.out.println("Best chromosome: " + best);
-		System.out.println("Best fitness: " + bestFitness);
 
+		long endTime = System.currentTimeMillis();
+		double runtime = (endTime - startTime) / 1000.0;
+
+		System.out.printf("GA  | File: %-25s | Seed: %d | Best: %.0f | Time: %.3fs%n",
+				filePath, seed, bestFitness, runtime);
+
+		return bestFitness;
 	}
 }

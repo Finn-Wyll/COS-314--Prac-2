@@ -1,0 +1,215 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{parskip}
+\usepackage{graphicx}
+
+\title{COS314 Assignment 2: GA vs ILS on the 0/1 Knapsack Problem}
+\author{Alessandro Paravano}
+\date{18 April 2026}
+
+\begin{document}
+
+\maketitle
+
+% ============================================================
+\section{Introduction}
+% ============================================================
+
+The 0/1 Knapsack Problem involves selecting items with weights and values to maximise total value without exceeding a weight capacity $W$. It is NP-hard, so exact methods are too slow for large instances. We compare a Genetic Algorithm (GA) and an Iterated Local Search (ILS) on ten benchmark instances. Both algorithms are implemented in Java and seeded for reproducibility.
+
+% ============================================================
+\section{Genetic Algorithm}
+% ============================================================
+
+\subsection{Functionality}
+
+A GA evolves a population of candidate solutions over generations \cite{notes}. Each solution (chromosome) is a binary string of length $n$, where a 1 means item $i$ is included. The components are:
+
+\begin{itemize}
+    \item \textbf{Initial Population:} 16 random binary chromosomes generated using the supplied seed.
+    \item \textbf{Fitness:} Total value of selected items. Returns 0 if overweight or empty.
+    \item \textbf{Selection:} Tournament selection with size 3 -- three random chromosomes are drawn and the best is kept.
+    \item \textbf{Crossover:} Single-point crossover at rate 0.7. A random split point divides two parents to create a child.
+    \item \textbf{Mutation:} A single random bit is flipped at rate 0.2.
+    \item \textbf{Replacement:} Fully generational -- the entire population is replaced each iteration.
+    \item \textbf{Termination:} 1000 iterations. The best chromosome in the final population is returned.
+\end{itemize}
+
+\subsection{Configuration}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+Population size    & 16 \\
+Crossover rate     & 0.7 \\
+Mutation rate      & 0.2 \\
+Tournament size    & 3 \\
+Max iterations     & 1000 \\
+\bottomrule
+\end{tabular}
+\caption{GA parameters.}
+\end{table}
+
+% ============================================================
+\section{Iterated Local Search}
+% ============================================================
+
+\subsection{Functionality}
+
+ILS is a single-point metaheuristic that escapes local optima by perturbing the current solution and re-applying local search \cite{notes}. We use Tabu Search as the inner local search. The procedure follows Algorithm 5 from the lecture notes:
+
+\begin{enumerate}
+    \item Generate a random initial solution $s_1$.
+    \item $s^* \leftarrow \text{LocalSearch}(s_1)$
+    \item \textbf{repeat:}
+    \begin{enumerate}
+        \item $s' \leftarrow \text{Perturbation}(s^*)$ -- flip 3 random bits.
+        \item $s^{**} \leftarrow \text{LocalSearch}(s')$
+        \item $s^* \leftarrow \text{AcceptanceCriterion}(s^*, s^{**})$ -- keep $s^{**}$ if $f(s^{**}) \geq f(s^*)$.
+    \end{enumerate}
+    \item \textbf{until} 200 iterations. Return best solution found.
+\end{enumerate}
+
+\textbf{Local Search (Tabu Search).} Algorithm 3 from the lecture notes is used \cite{notes}:
+
+\begin{itemize}
+    \item A FIFO queue $L$ (max size $z = 7$) stores recently visited solutions.
+    \item Generate a random neighbour $s'$ by flipping one random bit.
+    \item If $s' \notin L$: remove oldest if $|L| \geq z$, then add $s'$ to $L$.
+    \item Accept $s'$ if $f(s') > f(s)$.
+    \item Repeat for 100 iterations.
+\end{itemize}
+
+\subsection{Configuration}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+ILS iterations              & 200 \\
+Tabu iterations per call    & 100 \\
+Tabu list size ($z$)        & 7 \\
+Perturbation strength       & 3 bits \\
+Acceptance criterion        & Greedy ($\geq$ current) \\
+\bottomrule
+\end{tabular}
+\caption{ILS parameters.}
+\end{table}
+
+% ============================================================
+\section{Results}
+% ============================================================
+
+Both algorithms were run with seed 42 on all ten instances. Known optima are from the provided spreadsheet.
+
+\begin{table}[h]
+\centering
+\caption{Comparison of GA and Iterated Local Search on 10 knapsack problem instances}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|c|c|r|r|r|}
+\hline
+\textbf{Problem Instance} & \textbf{Algorithm} & \textbf{Seed Value} & \textbf{Best Solution} & \textbf{Known Optimum} & \textbf{Runtime (seconds)} \\
+\hline
+\multirow{2}{*}{f1\_l-d\_kp\_10\_269}   & ILS & 42 & 295.00  & 295    & 0.021 \\
+                                         & GA  & 42 & 294     & 295    & 0.022 \\
+\hline
+\multirow{2}{*}{f2\_l-d\_kp\_20\_878}   & ILS & 42 & 1024.00 & 1024   & 0.008 \\
+                                         & GA  & 42 & 1024    & 1024   & 0.017 \\
+\hline
+\multirow{2}{*}{f3\_l-d\_kp\_4\_20}     & ILS & 42 & 35.00   & 35     & 0.007 \\
+                                         & GA  & 42 & 35      & 35     & 0.011 \\
+\hline
+\multirow{2}{*}{f4\_l-d\_kp\_4\_11}     & ILS & 42 & 23.00   & 23     & 0.003 \\
+                                         & GA  & 42 & 23      & 23     & 0.005 \\
+\hline
+\multirow{2}{*}{f5\_l-d\_kp\_15\_375}   & ILS & 42 & 481.07  & 481.07 & 0.007 \\
+                                         & GA  & 42 & 448     & 481.07 & 0.010 \\
+\hline
+\multirow{2}{*}{f6\_l-d\_kp\_10\_60}    & ILS & 42 & 52.00   & 52     & 0.006 \\
+                                         & GA  & 42 & 50      & 52     & 0.006 \\
+\hline
+\multirow{2}{*}{f7\_l-d\_kp\_7\_50}     & ILS & 42 & 107.00  & 107    & 0.004 \\
+                                         & GA  & 42 & 107     & 107    & 0.004 \\
+\hline
+\multirow{2}{*}{f8\_l-d\_kp\_23\_10000} & ILS & 42 & 9761.00 & 9767   & 0.013 \\
+                                         & GA  & 42 & 9742    & 9767   & 0.008 \\
+\hline
+\multirow{2}{*}{f9\_l-d\_kp\_5\_80}     & ILS & 42 & 130.00  & 130    & 0.005 \\
+                                         & GA  & 42 & 130     & 130    & 0.007 \\
+\hline
+\multirow{2}{*}{f10\_l-d\_kp\_20\_879}  & ILS & 42 & 1025.00 & 1025   & 0.013 \\
+                                         & GA  & 42 & 1025    & 1025   & 0.010 \\
+\hline
+\end{tabular}}
+\end{table}
+
+% ============================================================
+\section{Statistical Analysis}
+% ============================================================
+
+A one-tailed Wilcoxon signed-rank test is used to compare the two algorithms at the 5\% significance level \cite{notes}.
+
+\begin{itemize}
+    \item $H_0$: The mean performance of GA and ILS is equivalent.
+    \item $H_1$: ILS achieves a higher mean solution quality than GA.
+\end{itemize}
+
+Mean results were computed over five seeds (42, 123, 456, 789, 1000) to get ten paired observations. The differences $d_i = \text{ILS}_i - \text{GA}_i$ are shown below.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrc}
+\toprule
+\textbf{Instance} & \textbf{$d_i$} & \textbf{$|d_i|$} & \textbf{Rank} \\
+\midrule
+f1\_l-d\_kp\_10\_269   & 2.00  & 2.00  & 2 \\
+f2\_l-d\_kp\_20\_878   & 28.80 & 28.80 & 6 \\
+f3\_l-d\_kp\_4\_20     & 0.00  & --    & tie \\
+f4\_l-d\_kp\_4\_11     & 0.00  & --    & tie \\
+f5\_l-d\_kp\_15\_375   & 47.07 & 47.07 & 7 \\
+f6\_l-d\_kp\_10\_60    & 0.80  & 0.80  & 1 \\
+f7\_l-d\_kp\_7\_50     & 6.00  & 6.00  & 3 \\
+f8\_l-d\_kp\_23\_10000 & 15.60 & 15.60 & 4 \\
+f9\_l-d\_kp\_5\_80     & 0.00  & --    & tie \\
+f10\_l-d\_kp\_20\_879  & 27.60 & 27.60 & 5 \\
+\bottomrule
+\end{tabular}
+\caption{Signed differences and ranks (ties excluded, $n = 7$).}
+\end{table}
+
+All non-tied differences are positive, so:
+\[
+W^+ = 1+2+3+4+5+6+7 = 28, \qquad W^- = 0, \qquad T = \min(W^+, W^-) = 0
+\]
+
+For $n = 7$, $\alpha = 0.05$ (one-tailed), the critical value is $W_{\text{crit}} = 3$. Since $T = 0 \leq 3$, we \textbf{reject $H_0$} and conclude that ILS performs significantly better than GA.
+
+% ============================================================
+\section{Critical Analysis}
+% ============================================================
+
+ILS outperforms the GA on most instances. With seed 42, ILS hits the known optimum on 9 out of 10 instances, while the GA only achieves it on 6. The Wilcoxon test confirms this difference is statistically significant.
+
+The GA struggles on harder instances like f5 and f2, where its mean result is well below the optimum. This is likely due to premature convergence -- with only 16 chromosomes the population loses diversity quickly and gets stuck. The mutation rate of 0.2 is not always enough to recover from this.
+
+ILS is much more consistent. The Tabu Search inner loop prevents revisiting recent solutions, and the perturbation step resets the search to a new region each outer iteration. This combination makes it much harder for ILS to get permanently stuck.
+
+Both algorithms miss the optimum on f8 (the largest instance). The GA gets 9742 and ILS gets 9761 vs 9767. This is expected since f8 has 23 items and is more complex -- increasing iterations or tabu list size would likely help here.
+
+In terms of runtime, both algorithms finish in under 30ms per instance, so speed is not a concern. Overall ILS is the better choice for this problem: it is more reliable, produces consistently near-optimal results, and is less sensitive to the random seed.
+
+% ============================================================
+\begin{thebibliography}{9}
+\bibitem{notes}
+Nyathi, T. (2025). \textit{COS314 Artificial Intelligence: Lecture Notes -- Search and Optimisation}. Department of Computer Science, University of Pretoria.
+\end{thebibliography}
+
+\end{document}
