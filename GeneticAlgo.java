@@ -6,7 +6,7 @@ import java.io.FileNotFoundException;
 
 public class GeneticAlgo {
 	private ArrayList<Item> knapsack = new ArrayList<>();
-	private int MAX_ITERATIONS = 1000;
+	private int MAX_ITERATIONS = 100;
 	private int iterations = 0;
 	private int maxWeight;
 	private int size;
